@@ -69,7 +69,7 @@ def getLinkCurriculumAtPage(parola_chiave, luogo, page):
     return getLinkCurriculum(soup)
 
 
-# FUNZIONE CHE PRELEVA TUTTO IL TESTO DEL CURRICULUM
+# Funzione che ritorna il dataframe con tutte le sezioni dei curriculum
 def getAllCurriculumText(n_pag, parola_chiave, luogo):
     url_di_partenza = 'https://www.jobatus.it/cv?q=' + parola_chiave + '&l=' + luogo
     # svuota il dataframe_cv
@@ -181,10 +181,8 @@ def getAllCurriculumText(n_pag, parola_chiave, luogo):
     return dataframe_cv
 
 
-# MAIN
-def __main__():
-    logger.info("Start scraping test")
-    dataframe_cv = getAllCurriculumText(2, 'project', '')
+# Funzione che scrive il csv da un dataframe con tutte le colonne complete
+def writeCsvFromDataframe(dataframe_cv):
     try:
         if not os.path.isfile('scraping_jobatus.csv'):
             dataframe_cv.to_csv('scraping_jobatus.csv', header=headers, sep=";", index=False, encoding="utf-8-sig")
@@ -195,6 +193,36 @@ def __main__():
     except Exception as e:
         logger.exception("Errore scrittura su csv")
 
+
+# Funzione che scrive il csv da un dataframe con una sola colonna
+def writeCsvFromDataframeOfOneColumn(dataframe_cv):
+    try:
+        if not os.path.isfile('scraping_jobatus.csv'):
+            dataframe_cv.to_csv('scraping_jobatus.csv', header=["Esperienza"], sep=";", index=False,
+                                encoding="utf-8-sig")
+        else:
+            dataframe_cv.to_csv('scraping_jobatus.csv', mode="a", header=False, sep=";", index=False,
+                                encoding="utf-8-sig")
+
+    except Exception as e:
+        logger.exception("Errore scrittura su csv")
+
+
+# MAIN
+def __main__():
+    logger.info("Start scraping test")
+    dataframe_cv = getAllCurriculumText(1, 'project', '')
+
+    # modifica dataframe con solo la colonna di esperienza
+    del dataframe_cv["url"]
+    del dataframe_cv["Istruzione e formazione"]
+    del dataframe_cv["Lingue"]
+    del dataframe_cv["Informazioni addizionali"]
+
+    # scrivo il csv dal dataframe
+    writeCsvFromDataframeOfOneColumn(dataframe_cv)
+
     logger.info("Programma terminato.")
+
 
 __main__()

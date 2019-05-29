@@ -1,6 +1,5 @@
 import requests as req
 import pandas as pd
-import time
 from bs4 import BeautifulSoup
 import re
 import os
@@ -20,10 +19,6 @@ f_handler.setLevel(logging.INFO)
 # sito web da cui si parte
 url_di_base = 'https://www.jobatus.it/ricerca-cv'
 
-# headers del dataframe
-headers = ["url", "Esperienza", "Istruzione e formazione", "Lingue", "Informazioni addizionali"]
-dataframe = pd.DataFrame(columns=headers, index=None)
-
 
 # FUNZIONE CHE PERMETTE DI SCARICARE IL CONTENUTO DI UNA PAGINA
 def getPage(link):
@@ -31,24 +26,9 @@ def getPage(link):
     try:
         data = req.get(link).content
     except Exception as e:
-        print("\n\nfailed to download \n\n")
         logger.exception("\n\nfailed to download \n\n")
-        print(e)
 
     return data
-
-
-# FUNZIONE CHE PERMETTE DI TESTARE SE LA PAGINA PERMETTE DI EFFETTUARE DIVERSE RICHIESTE IN SERIE
-def TestTheSite(link, attemps, waiting_time):
-    for x in range(attemps):
-        r = req.get(link)
-        req.session().keep_alive = False
-        time.sleep(waiting_time)  # consiglio ad esempio (0.001)
-        if r.status_code == 200:
-            print('Posso continuare')
-        else:
-            print("C'è un problema")
-        time.sleep(waiting_time)  # consiglio ad esempio (0.001)
 
 
 # SOTTOFUNZIONE UTILIZZATA PER EVITARE DI RIPETERE CODICE ALL'INTERNO DELLA FUNZIONE getLinkCurriculumAtPage
@@ -92,8 +72,12 @@ def getLinkCurriculumAtPage(parola_chiave, luogo, page):
 # FUNZIONE CHE PRELEVA TUTTO IL TESTO DEL CURRICULUM
 def getAllCurriculumText(n_pag, parola_chiave, luogo):
     url_di_partenza = 'https://www.jobatus.it/cv?q=' + parola_chiave + '&l=' + luogo
+    # svuota il dataframe_cv
+    global headers
+    headers = ["url", "Esperienza", "Istruzione e formazione", "Lingue", "Informazioni addizionali"]
+    dataframe_cv = pd.DataFrame(columns=headers, index=None)
 
-    print("Url di partenza: " + url_di_partenza)
+    logger.info("Url di partenza: " + url_di_partenza)
     # scarico il contenuto della pagina e lo metto in una variabile
     web_site_content = getPage(url_di_partenza)
     # parso il contenuto per renderlo un testo
@@ -106,27 +90,26 @@ def getAllCurriculumText(n_pag, parola_chiave, luogo):
     tot_curriculum = int(tot_curriculum[0])
     tot_pages = int(tot_curriculum / 20) + 1
 
-    if (n_pag < 1 or n_pag > tot_pages):
-        return print(
-            "Il numero da inserire deve essere compreso tra 2 e " + str(tot_pages) + ". Se si inserisce " + str(
-                tot_pages) + " verranno scaricati tutti i " + str(tot_curriculum) + " curriculum disponibili.")
+    if n_pag < 1 or n_pag > tot_pages:
+        logger.info("Il numero da inserire deve essere compreso tra 2 e " + str(tot_pages) + ". Se si inserisce " + str(
+            tot_pages) + " verranno scaricati tutti i " + str(tot_curriculum) + " curriculum disponibili.")
+        return dataframe_cv
 
-    # In all curriculum metto tutti i curriculum presenti nelle varie liste che mi vengono ritornate da getLinkCurriculumAtPage()
+    # In all curriculum metto tutti i curriculum presenti nelle varie liste
+    # che mi vengono ritornate da getLinkCurriculumAtPage()
     all_curriculum = []
-    logger.info("Sto scaricando le pagine :\n")
     for u in range(1, n_pag + 1):
         lista_cv = getLinkCurriculumAtPage(parola_chiave, luogo, u)
 
         for link_cv in lista_cv:
             all_curriculum.append(link_cv)
 
-    print("CV Trovati: " + str(tot_curriculum))
+    logger.info("CV Trovati: " + str(tot_curriculum))
 
-    logger.info("Scarico i curriculum e creo il dataframe.\n")
     for curr in all_curriculum:
+        print("Url che sto scaricando: " + curr)
         # url del curriculum che scorre per le varie posizioni dell'array
         url_di_partenza = curr
-        print(curr)
         web_site_content = getPage(url_di_partenza)
         soup_4 = BeautifulSoup(web_site_content, 'html.parser')
         # prendo tutto il testo e lo stampo con il for (div è il contenitore che ha la classe block
@@ -164,13 +147,7 @@ def getAllCurriculumText(n_pag, parola_chiave, luogo):
             elif title == "Esperienza":
                 esperienza = informazioni
 
-        """
-                print("Lingue : " + lingue)
-                print("Info aggiuntive : " + info_aggiuntive)
-                print("Esperienza : " + esperienza)
-                print("Istruzione : " + istruzione)
-        """
-
+        # riempie i campi vuoti con "n/a"
         if lingue == "":
             lingue = "n/a"
         if info_aggiuntive == "":
@@ -180,6 +157,7 @@ def getAllCurriculumText(n_pag, parola_chiave, luogo):
         if istruzione == "":
             istruzione = "n/a"
 
+        # pulisce le sezioni dagli spazi inutili
         lingue = re.sub(r'(\s+|\n)', ' ', lingue)
         istruzione = re.sub(r'(\s+|\n)', ' ', istruzione)
         esperienza = re.sub(r'(\s+|\n)', ' ', esperienza)
@@ -187,9 +165,8 @@ def getAllCurriculumText(n_pag, parola_chiave, luogo):
 
         try:
             # dato che ci troviamo all'interno di una funzione
-            # bisogna specificare che dataframe è la variabile globale
-            global dataframe
-            dataframe = dataframe.append(
+            # bisogna specificare che dataframe_cv è la variabile globale
+            dataframe_cv = dataframe_cv.append(
                 {
                     "url": curr,
                     "Esperienza": esperienza,
@@ -199,25 +176,25 @@ def getAllCurriculumText(n_pag, parola_chiave, luogo):
                 },
                 ignore_index=True)
         except Exception as e:
-            print(e)
             logger.exception(e)
 
-# chiamo la funzione che scaricherà i curriculum e crerà il dataframe
-getAllCurriculumText(50, 'project', '')
+    return dataframe_cv
 
-# creo e scrivo il csv
-logger.info("Sto scrivendo il csv.\n")
-try:
-    if not os.path.isfile('scraping_jobatus.csv'):
-        dataframe.to_csv('scraping_jobatus.csv', header=headers, sep=";", index=False, encoding="utf-8-sig")
-    else:
-        dataframe.to_csv('scraping_jobatus.csv', mode="a", header=False, sep=";", index=False, encoding="utf-8-sig")
 
-    # svuota il dataframe
-    dataframe = pd.DataFrame(columns=headers, index=None)
-except Exception as e:
-    print("Errore scrittura su csv")
-    logger.exception("Errore scrittura su csv")
-    print(e)
+# MAIN
+def __main__():
+    logger.info("Start scraping test")
+    dataframe_cv = getAllCurriculumText(2, 'project', '')
+    try:
+        if not os.path.isfile('scraping_jobatus.csv'):
+            dataframe_cv.to_csv('scraping_jobatus.csv', header=headers, sep=";", index=False, encoding="utf-8-sig")
+        else:
+            dataframe_cv.to_csv('scraping_jobatus.csv', mode="a", header=False, sep=";", index=False,
+                                encoding="utf-8-sig")
 
-logger.info("Programma terminato.")
+    except Exception as e:
+        logger.exception("Errore scrittura su csv")
+
+    logger.info("Programma terminato.")
+
+__main__()

@@ -4,10 +4,10 @@ import re
 import nltk
 import gensim
 import pickle
-import csv
 from collections import Counter
 
 tokenizer = RegexpTokenizer(r'\w+')
+nltk.data.path.append("data")
 
 
 # Aggiungo nuove stop_word a quelle già presenti nella libreria nltk
@@ -72,23 +72,12 @@ def delete_word(text, other_stop=None):
 
 # Funzione che unisce le parole che si presentano spesso in coppia (es. new york)
 def bigram_text(titles):
+    # il token è la singola parola
     token = [tokenizer.tokenize(x) for x in titles]
     bigram = gensim.models.Phrases(token, min_count=10, threshold=20)
     trigram = gensim.models.Phrases(bigram[token], min_count=10, threshold=20)
     trigram_mod = gensim.models.phrases.Phraser(trigram)
     token = [trigram_mod[x] for x in token]
     titles = [' '.join(x) for x in token]
-    pickle.dump(trigram_mod, open("news_category/model_files_pickle/trigram.pickle", 'wb'))
+    pickle.dump(trigram_mod, open("C:\\Users\\andre\\PycharmProjects\\prove\\Training Testing - Bucket - Classificazione Bayesiana\\news_category\model.pickle", 'wb'))
     return titles
-
-# Funzione a cui passo il path del csv con i curriculum e mi ritorna un nuovo csv che ha solo
-# la colonna Esperienza con i campi ripuliti già delle parole che non servono
-def getOnlyExperienceCsv(myfilepath):
-    with open(myfilepath, 'rb') as f:
-        my_csv = csv.reader(f)
-        for row in my_csv:
-            text = row[1]
-            ............
-
-            #dobbiamo creare un csv nuovo con solo la colonna esperienza quindi da quel csv ad un altro csv e poi pulisco o
-            #mentre lo creo (o se non ce la faccio dopo)

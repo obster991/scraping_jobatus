@@ -1,4 +1,4 @@
-2019-05-29 15:57:38 ~ 4548 ~ __main__ ~ INFO ~ Start scraping test
-2019-05-29 15:57:38 ~ 4548 ~ __main__ ~ INFO ~ Url di partenza: https://www.jobatus.it/cv?q=project&l=
-2019-05-29 15:57:41 ~ 4548 ~ __main__ ~ INFO ~ CV Trovati: 1000
-2019-05-29 15:58:07 ~ 4548 ~ __main__ ~ INFO ~ Programma terminato.
+2019-05-30 11:42:28 ~ 16308 ~ __main__ ~ INFO ~ Start scraping test
+2019-05-30 11:42:28 ~ 16308 ~ __main__ ~ INFO ~ Url di partenza: https://www.jobatus.it/cv?q=project&l=
+2019-05-30 11:42:47 ~ 16308 ~ __main__ ~ INFO ~ CV Trovati: 1000
+2019-05-30 11:47:51 ~ 16308 ~ __main__ ~ INFO ~ Programma terminato.

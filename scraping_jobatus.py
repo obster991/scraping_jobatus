@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import re
 import os
 import logging
+import text_cleaning
 
 # creazione file logging
 logger = logging.getLogger(__name__)
@@ -194,6 +195,19 @@ def writeCsvFromDataframe(dataframe_cv):
         logger.exception("Errore scrittura su csv")
 
 
+# Funzione che scrive il csv da un dataframe con due colonne
+def writeCsvFromDataframeOfTwoColumn(dataframe_cv):
+    try:
+        if not os.path.isfile('scraping_jobatus.csv'):
+            dataframe_cv.to_csv('scraping_jobatus.csv', header=["Esperienza", "Esperienza pulita"], sep=";", index=False,
+                                encoding="utf-8-sig")
+        else:
+            dataframe_cv.to_csv('scraping_jobatus.csv', mode="a", header=False, sep=";", index=False,
+                                encoding="utf-8-sig")
+
+    except Exception as e:
+        logger.exception("Errore scrittura su csv")
+
 # Funzione che scrive il csv da un dataframe con una sola colonna
 def writeCsvFromDataframeOfOneColumn(dataframe_cv):
     try:
@@ -211,7 +225,7 @@ def writeCsvFromDataframeOfOneColumn(dataframe_cv):
 # MAIN
 def __main__():
     logger.info("Start scraping test")
-    dataframe_cv = getAllCurriculumText(1, 'project', '')
+    dataframe_cv = getAllCurriculumText(50, 'project', '')
 
     # modifica dataframe con solo la colonna di esperienza
     del dataframe_cv["url"]
@@ -219,10 +233,34 @@ def __main__():
     del dataframe_cv["Lingue"]
     del dataframe_cv["Informazioni addizionali"]
 
-    # scrivo il csv dal dataframe
+    # pulisco il testo che c'è nell' unica  colonna esperienza del dataframe
+    colonnaExp = dataframe_cv["Esperienza"].tolist()
+    colonnaExpCleaned = []
+    for exp in colonnaExp:
+        exp = text_cleaning.delete_word(str(exp))
+        #colonnaExp = text_cleaning.bigram_text(str(colonnaExp))
+        colonnaExpCleaned.append(str(exp))
+    # svuoto il dataframe
+    del dataframe_cv["Esperienza"]
+    # inserisco la nuova colonna con il testo pulito
+    dataframe_cv = pd.DataFrame(columns=["Esperienza"], index=None)
+    for data in colonnaExpCleaned:
+        dataframe_cv = dataframe_cv.append({"Esperienza": data}, ignore_index=True)
+    # creo il csv
     writeCsvFromDataframeOfOneColumn(dataframe_cv)
 
     logger.info("Programma terminato.")
+
+
+'''
+    # metto la lista pulita nel dataframe accanto alla colonna di esperienza
+    dataframe_cv['Esperienza pulita'] = pd.Series(colonnaExp)
+
+    # scrivo il csv dal dataframe
+    writeCsvFromDataframeOfTwoColumn(dataframe_cv)
+
+    logger.info("Programma terminato.")
+    '''
 
 
 __main__()
